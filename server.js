@@ -1,13 +1,17 @@
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
-import { saveRequest, getAllRequests, getRequestById, savePreset, getAllPresets } from './db.js';
+import { saveRequest, getAllRequests, getRequestById, savePreset, getAllPresets, deletePreset } from './db.js';
 
 const app = express();
 const PORT = 3000;
 
 // Enable CORS for React app
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  credentials: true
+}));
 app.use(express.json());
 
 // endpoint to save request and response to database
@@ -29,19 +33,38 @@ app.post('/saveData', async (req, res) => {
   }
 });
 
+// Proxy endpoint to bypass CORS
+app.post('/api/proxy', async (req, res) => {
+  try {
+    const { method, url, headers, data } = req.body;
+
+    const response = await axios({
+      method,
+      url,
+      headers,
+      data,
+      validateStatus: () => true // Allow any status code to resolution
+    });
+
+    res.json({
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+      data: response.data
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // endpoint to save a new preset
 app.post('/savePreset', async (req, res) => {
   try {
-    const { name, method, url, headers, body } = req.body;
-
-    if (!name || !method || !url) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    savePreset({ name, method, url, headers, body });
+    const { name, method, url, headers, body, collection } = req.body;
+    savePreset({ name, method, url, headers, body, collection });
     res.status(200).json({ message: 'Preset saved successfully!' });
   } catch (error) {
-    console.error('Preset Save Error:', error);
+    console.error('Database Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -51,6 +74,15 @@ app.get('/api/presets', (req, res) => {
   try {
     const presets = getAllPresets();
     res.json(presets);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/presets/:id', (req, res) => {
+  try {
+    const deletedPreset = deletePreset(req.params.id);
+    res.status(200).json({ message: 'Preset deleted successfully!' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

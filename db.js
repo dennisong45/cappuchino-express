@@ -54,7 +54,8 @@ export const savePreset = (presetData) => {
     presetData.method,
     presetData.url,
     JSON.stringify(presetData.headers || {}),
-    presetData.body ? JSON.stringify(presetData.body) : null
+    presetData.body ? JSON.stringify(presetData.body) : null,
+    presetData.collection || 'Uncategorized'
   );
 };
 
@@ -65,6 +66,11 @@ export const getAllPresets = () => {
     headers: JSON.parse(preset.headers || '{}'),
     body: preset.body ? JSON.parse(preset.body) : null
   }));
+};
+
+export const deletePreset = (id) => {
+  const stmt = db.prepare('DELETE FROM presets WHERE id = ?');
+  stmt.run(id);
 };
 
 export default db;

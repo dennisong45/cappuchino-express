@@ -4,7 +4,7 @@ import capexpress from '../capexpress.png'
 
 function Navbar() {
   const location = useLocation()
-  
+
   return (
     <nav style={styles.navbar}>
       <div style={styles.content}>
@@ -13,8 +13,8 @@ function Navbar() {
           <h1 style={styles.title}>Cappuchino Express</h1>
         </Link>
         <div style={styles.navLinks}>
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             style={{
               ...styles.navLink,
               ...(location.pathname === '/' ? styles.activeLink : {})
@@ -22,8 +22,8 @@ function Navbar() {
           >
             API Client
           </Link>
-          <Link 
-            to="/history" 
+          <Link
+            to="/history"
             style={{
               ...styles.navLink,
               ...(location.pathname === '/history' ? styles.activeLink : {})
@@ -39,10 +39,10 @@ function Navbar() {
 
 const styles = {
   navbar: {
-    backgroundColor: '#fff',
-    borderBottom: '1px solid #e0e0e0',
+    backgroundColor: 'var(--surface-color)',
+    borderBottom: '1px solid var(--border-color)',
     padding: '1rem 2rem',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    boxShadow: '0 4px 6px rgba(62, 39, 35, 0.1)', // Warm shadow
   },
   content: {
     display: 'flex',
@@ -57,7 +57,7 @@ const styles = {
     alignItems: 'center',
     gap: '1rem',
     textDecoration: 'none',
-    color: 'inherit',
+    color: 'var(--text-primary)',
   },
   navLinks: {
     display: 'flex',
@@ -66,16 +66,17 @@ const styles = {
   },
   navLink: {
     textDecoration: 'none',
-    color: '#666',
+    color: 'var(--text-secondary)',
     fontSize: '1rem',
     fontWeight: '500',
     padding: '0.5rem 1rem',
-    borderRadius: '4px',
+    borderRadius: '8px',
     transition: 'all 0.2s ease',
   },
   activeLink: {
-    color: '#007bff',
-    backgroundColor: '#f0f7ff',
+    color: 'var(--accent-color)',
+    backgroundColor: 'var(--bg-secondary)',
+    fontWeight: '600',
   },
   logo: {
     height: '50px',
@@ -85,7 +86,8 @@ const styles = {
     margin: 0,
     fontSize: '1.5rem',
     fontWeight: 'bold',
-    color: '#333',
+    color: 'var(--text-primary)',
+    fontFamily: "'Georgia', serif", // More "coffee shop" feel
   },
 }
 

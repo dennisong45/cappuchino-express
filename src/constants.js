@@ -1,3 +1,5 @@
+// I know i should use ORM but im lazy
+
 export const CREATE_REQUESTS_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,6 +23,7 @@ export const CREATE_PRESETS_TABLE_SQL = `
     url TEXT NOT NULL,
     headers TEXT,
     body TEXT,
+    collection TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `;
@@ -32,14 +35,14 @@ export const INSERT_REQUEST_SQL = `
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
-export const GET_ALL_REQUESTS_SQL = 'SELECT * FROM requests ORDER BY timestamp DESC';
+export const GET_ALL_REQUESTS_SQL = 'SELECT* FROM requests ORDER BY timestamp DESC';
 
 export const GET_REQUEST_BY_ID_SQL = 'SELECT * FROM requests WHERE id = ?';
 
 export const INSERT_PRESET_SQL = `
   INSERT INTO presets (
-    name, method, url, headers, body
-  ) VALUES (?, ?, ?, ?, ?)
+    name, method, url, headers, body, collection
+  ) VALUES (?, ?, ?, ?, ?, ?)
 `;
 
 export const GET_ALL_PRESETS_SQL = 'SELECT * FROM presets ORDER BY timestamp DESC';

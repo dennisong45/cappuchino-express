@@ -26,27 +26,22 @@ function History() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A'
-    
-    // SQLite returns timestamps in format "YYYY-MM-DD HH:MM:SS" (UTC)
-    // We need to explicitly treat it as UTC before converting to Mountain Time
+
+
     let date
-    
-    // Check if it's already in ISO format with timezone
+
     if (dateString.includes('Z') || dateString.includes('+') || dateString.includes('T')) {
       date = new Date(dateString)
     } else {
-      // SQLite format: "YYYY-MM-DD HH:MM:SS" - treat as UTC
-      // Replace space with 'T' and add 'Z' to make it ISO format (UTC)
+
       const isoString = dateString.replace(' ', 'T') + 'Z'
       date = new Date(isoString)
     }
-    
-    // If date is invalid, return original string
+
     if (isNaN(date.getTime())) {
       return dateString
     }
-    
-    // Convert to Mountain Time
+
     return date.toLocaleString('en-US', {
       timeZone: 'America/Denver',
       year: 'numeric',
@@ -104,9 +99,9 @@ function History() {
                           <span style={{
                             ...styles.methodBadge,
                             backgroundColor: request.method === 'GET' ? '#007bff' :
-                                           request.method === 'POST' ? '#28a745' :
-                                           request.method === 'PUT' ? '#ffc107' :
-                                           request.method === 'DELETE' ? '#dc3545' : '#6c757d'
+                              request.method === 'POST' ? '#28a745' :
+                                request.method === 'PUT' ? '#ffc107' :
+                                  request.method === 'DELETE' ? '#dc3545' : '#6c757d'
                           }}>
                             {request.method}
                           </span>
@@ -215,46 +210,50 @@ const styles = {
   title: {
     fontSize: '2rem',
     fontWeight: 'bold',
-    color: '#333',
+    color: 'var(--text-primary)',
     margin: 0,
+    fontFamily: "'Georgia', serif",
   },
   refreshButton: {
     padding: '0.75rem 1.5rem',
     fontSize: '1rem',
-    backgroundColor: '#007bff',
+    backgroundColor: 'var(--accent-color)',
     color: '#fff',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '8px',
     cursor: 'pointer',
     fontWeight: '600',
+    transition: 'background-color 0.2s',
   },
   loading: {
     textAlign: 'center',
     padding: '2rem',
     fontSize: '1.1rem',
-    color: '#666',
+    color: 'var(--text-secondary)',
   },
   error: {
     padding: '1rem',
     backgroundColor: '#fee',
     border: '1px solid #fcc',
     borderRadius: '8px',
-    color: '#c33',
+    color: 'var(--error-color)',
     marginBottom: '1rem',
   },
   empty: {
     textAlign: 'center',
     padding: '3rem',
     fontSize: '1.1rem',
-    color: '#666',
-    backgroundColor: '#f9f9f9',
-    borderRadius: '8px',
+    color: 'var(--text-secondary)',
+    backgroundColor: 'var(--surface-color)',
+    borderRadius: '12px',
+    border: '1px solid var(--border-color)',
   },
   tableContainer: {
     overflowX: 'auto',
-    backgroundColor: '#fff',
-    border: '1px solid #e0e0e0',
-    borderRadius: '8px',
+    backgroundColor: 'var(--surface-color)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '12px',
+    boxShadow: '0 2px 8px rgba(62, 39, 35, 0.05)',
   },
   table: {
     width: '100%',
@@ -263,24 +262,24 @@ const styles = {
   th: {
     padding: '1rem',
     textAlign: 'left',
-    borderBottom: '2px solid #e0e0e0',
-    backgroundColor: '#f5f5f5',
+    borderBottom: '2px solid var(--border-color)',
+    backgroundColor: 'var(--bg-secondary)',
     fontWeight: '600',
-    color: '#333',
+    color: 'var(--text-primary)',
     fontSize: '0.9rem',
   },
   tr: {
-    borderBottom: '1px solid #e0e0e0',
+    borderBottom: '1px solid var(--border-color)',
   },
   td: {
     padding: '1rem',
     fontSize: '0.9rem',
-    color: '#333',
+    color: 'var(--text-primary)',
   },
   methodBadge: {
     display: 'inline-block',
     padding: '0.25rem 0.75rem',
-    borderRadius: '4px',
+    borderRadius: '6px',
     color: '#fff',
     fontWeight: '600',
     fontSize: '0.85rem',
@@ -294,19 +293,21 @@ const styles = {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    color: 'var(--text-secondary)',
   },
   viewButton: {
     padding: '0.5rem 1rem',
     fontSize: '0.85rem',
-    backgroundColor: '#6c757d',
+    backgroundColor: 'var(--text-secondary)',
     color: '#fff',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '6px',
     cursor: 'pointer',
+    transition: 'background-color 0.2s',
   },
   detailsCell: {
     padding: 0,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: 'var(--bg-primary)',
   },
   detailsContainer: {
     padding: '1.5rem',
@@ -315,8 +316,8 @@ const styles = {
     gap: '1.5rem',
   },
   detailsSection: {
-    backgroundColor: '#fff',
-    border: '1px solid #e0e0e0',
+    backgroundColor: 'var(--surface-color)',
+    border: '1px solid var(--border-color)',
     borderRadius: '8px',
     padding: '1rem',
   },
@@ -324,8 +325,8 @@ const styles = {
     margin: '0 0 1rem 0',
     fontSize: '1.1rem',
     fontWeight: '600',
-    color: '#333',
-    borderBottom: '2px solid #e0e0e0',
+    color: 'var(--text-primary)',
+    borderBottom: '2px solid var(--border-color)',
     paddingBottom: '0.5rem',
   },
   detailsContent: {
@@ -337,19 +338,21 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '0.5rem',
+    color: 'var(--text-primary)',
   },
   jsonPre: {
     margin: 0,
     padding: '1rem',
-    backgroundColor: '#f5f5f5',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '6px',
     fontSize: '0.85rem',
     fontFamily: 'monospace',
     overflow: 'auto',
     maxHeight: '300px',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
+    color: 'var(--text-primary)',
   },
 }
 
