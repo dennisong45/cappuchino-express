@@ -46,3 +46,30 @@ export const INSERT_PRESET_SQL = `
 `;
 
 export const GET_ALL_PRESETS_SQL = 'SELECT * FROM presets ORDER BY timestamp DESC';
+
+// Environments table SQL
+export const CREATE_ENVIRONMENTS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS environments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    variables TEXT DEFAULT '{}',
+    is_active INTEGER DEFAULT 0,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`;
+
+export const INSERT_ENVIRONMENT_SQL = `
+  INSERT INTO environments (name, variables, is_active) VALUES (?, ?, ?)
+`;
+
+export const GET_ALL_ENVIRONMENTS_SQL = 'SELECT * FROM environments ORDER BY timestamp DESC';
+
+export const GET_ACTIVE_ENVIRONMENT_SQL = 'SELECT * FROM environments WHERE is_active = 1 LIMIT 1';
+
+export const UPDATE_ENVIRONMENT_SQL = 'UPDATE environments SET name = ?, variables = ? WHERE id = ?';
+
+export const DEACTIVATE_ALL_ENVIRONMENTS_SQL = 'UPDATE environments SET is_active = 0';
+
+export const ACTIVATE_ENVIRONMENT_SQL = 'UPDATE environments SET is_active = 1 WHERE id = ?';
+
+export const DELETE_ENVIRONMENT_SQL = 'DELETE FROM environments WHERE id = ?';

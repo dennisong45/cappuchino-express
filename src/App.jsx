@@ -1,14 +1,31 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import axios from 'axios'
 import Navbar from './Navbar'
 import Input from './input'
 import History from './History'
+import Environment from './Environment'
 import PresetSidebar from './PresetSidebar'
 
 function AppContent() {
   const location = useLocation()
   const showSidebar = location.pathname === '/'
-  const [selectedPreset, setSelectedPreset] = React.useState(null)
+  const [selectedPreset, setSelectedPreset] = useState(null)
+  const [activeEnvironment, setActiveEnvironment] = useState(null)
+
+  // Fetch active environment on mount and when location changes
+  useEffect(() => {
+    fetchActiveEnvironment()
+  }, [location.pathname])
+
+  const fetchActiveEnvironment = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/api/environments/active')
+      setActiveEnvironment(response.data)
+    } catch (err) {
+      console.error('Failed to fetch active environment:', err)
+    }
+  }
 
   const handlePresetsLoaded = (presets) => {
     // Auto-load the first (latest) preset if none is selected yet and we have presets
@@ -29,7 +46,13 @@ function AppContent() {
         )}
         <div style={styles.content}>
           <Routes>
-            <Route path="/" element={<Input selectedPreset={selectedPreset} />} />
+            <Route path="/" element={
+              <Input
+                selectedPreset={selectedPreset}
+                activeEnvironment={activeEnvironment}
+              />
+            } />
+            <Route path="/environment" element={<Environment />} />
             <Route path="/history" element={<History />} />
           </Routes>
         </div>

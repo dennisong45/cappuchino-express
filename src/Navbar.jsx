@@ -23,6 +23,15 @@ function Navbar() {
             API Client
           </Link>
           <Link
+            to="/environment"
+            style={{
+              ...styles.navLink,
+              ...(location.pathname === '/environment' ? styles.activeLink : {})
+            }}
+          >
+            Environment
+          </Link>
+          <Link
             to="/history"
             style={{
               ...styles.navLink,

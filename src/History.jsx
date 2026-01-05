@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 function History() {
   const [requests, setRequests] = useState([])
@@ -142,16 +144,26 @@ function History() {
                                   </div>
                                   <div style={styles.detailsRow}>
                                     <strong>Headers:</strong>
-                                    <pre style={styles.jsonPre}>
+                                    <SyntaxHighlighter
+                                      language="json"
+                                      style={vscDarkPlus}
+                                      customStyle={styles.jsonPre}
+                                      wrapLongLines={true}
+                                    >
                                       {JSON.stringify(JSON.parse(request.request_headers || '{}'), null, 2)}
-                                    </pre>
+                                    </SyntaxHighlighter>
                                   </div>
                                   {request.request_body && (
                                     <div style={styles.detailsRow}>
                                       <strong>Body:</strong>
-                                      <pre style={styles.jsonPre}>
+                                      <SyntaxHighlighter
+                                        language="json"
+                                        style={vscDarkPlus}
+                                        customStyle={styles.jsonPre}
+                                        wrapLongLines={true}
+                                      >
                                         {JSON.stringify(JSON.parse(request.request_body), null, 2)}
-                                      </pre>
+                                      </SyntaxHighlighter>
                                     </div>
                                   )}
                                 </div>
@@ -164,16 +176,26 @@ function History() {
                                   </div>
                                   <div style={styles.detailsRow}>
                                     <strong>Headers:</strong>
-                                    <pre style={styles.jsonPre}>
+                                    <SyntaxHighlighter
+                                      language="json"
+                                      style={vscDarkPlus}
+                                      customStyle={styles.jsonPre}
+                                      wrapLongLines={true}
+                                    >
                                       {JSON.stringify(JSON.parse(request.response_headers || '{}'), null, 2)}
-                                    </pre>
+                                    </SyntaxHighlighter>
                                   </div>
                                   {request.response_body && (
                                     <div style={styles.detailsRow}>
                                       <strong>Body:</strong>
-                                      <pre style={styles.jsonPre}>
+                                      <SyntaxHighlighter
+                                        language="json"
+                                        style={vscDarkPlus}
+                                        customStyle={styles.jsonPre}
+                                        wrapLongLines={true}
+                                      >
                                         {JSON.stringify(JSON.parse(request.response_body), null, 2)}
-                                      </pre>
+                                      </SyntaxHighlighter>
                                     </div>
                                   )}
                                 </div>
@@ -343,16 +365,13 @@ const styles = {
   jsonPre: {
     margin: 0,
     padding: '1rem',
-    backgroundColor: 'var(--bg-primary)',
-    border: '1px solid var(--border-color)',
+    backgroundColor: '#1e1e1e',
+    border: '1px solid #404040',
     borderRadius: '6px',
     fontSize: '0.85rem',
-    fontFamily: 'monospace',
+    fontFamily: "'Fira Code', 'Consolas', 'Monaco', monospace",
     overflow: 'auto',
     maxHeight: '300px',
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word',
-    color: 'var(--text-primary)',
   },
 }
 

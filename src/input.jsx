@@ -2,8 +2,14 @@ import { useState, useEffect } from 'react'
 import React from 'react'
 import axios from 'axios'
 import SavePresetModal from './SavePresetModal';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import Editor from 'react-simple-code-editor';
+import { highlight, languages } from 'prismjs/components/prism-core';
+import 'prismjs/components/prism-json';
+import 'prismjs/themes/prism-tomorrow.css';
 
-function Input({ selectedPreset }) {
+function Input({ selectedPreset, activeEnvironment }) {
     const [method, setMethod] = useState('GET')
     const [url, setUrl] = useState('http://localhost:3000/hello')
     const [response, setResponse] = useState(null)
@@ -15,8 +21,29 @@ function Input({ selectedPreset }) {
     const [jsonBody, setJsonBody] = useState('{\n  \n}')
     const [formData, setFormData] = useState([{ key: '', value: '' }])
 
+    // Authentication state
+    const [authType, setAuthType] = useState('none') // 'none', 'bearer', 'basic', 'api-key'
+    const [bearerToken, setBearerToken] = useState('')
+    const [basicAuth, setBasicAuth] = useState({ username: '', password: '' })
+    const [apiKey, setApiKey] = useState({ key: '', value: '', addTo: 'header' }) // addTo: 'header' or 'query'
+
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Variable substitution helper
+    const substituteVariables = (text) => {
+        if (!text || !activeEnvironment?.variables) return text;
+
+        return text.replace(/\{(\w+)\}/g, (match, varName) => {
+            return activeEnvironment.variables[varName] !== undefined
+                ? activeEnvironment.variables[varName]
+                : match;
+        });
+    };
+
+    // Get resolved URL for display
+    const resolvedUrl = substituteVariables(url);
+    const hasVariables = url !== resolvedUrl;
 
     const handleSaveClick = () => {
         setIsModalOpen(true);
@@ -181,19 +208,38 @@ function Input({ selectedPreset }) {
         setError(null);
         setResponse(null);
 
-        // Prepare headers
+        // Prepare headers with variable substitution
         const headersObj = {};
         headers.forEach(header => {
             if (header.key.trim()) {
-                headersObj[header.key.trim()] = header.value.trim();
+                headersObj[substituteVariables(header.key.trim())] = substituteVariables(header.value.trim());
             }
         });
 
-        // Prepare Body
+        // Apply authentication
+        let finalUrl = substituteVariables(url);
+        if (authType === 'bearer' && bearerToken) {
+            headersObj['Authorization'] = `Bearer ${substituteVariables(bearerToken)}`;
+        } else if (authType === 'basic' && basicAuth.username) {
+            const credentials = btoa(`${substituteVariables(basicAuth.username)}:${substituteVariables(basicAuth.password)}`);
+            headersObj['Authorization'] = `Basic ${credentials}`;
+        } else if (authType === 'api-key' && apiKey.key) {
+            if (apiKey.addTo === 'header') {
+                headersObj[substituteVariables(apiKey.key)] = substituteVariables(apiKey.value);
+            } else {
+                // Add to query params
+                const separator = finalUrl.includes('?') ? '&' : '?';
+                finalUrl += `${separator}${encodeURIComponent(substituteVariables(apiKey.key))}=${encodeURIComponent(substituteVariables(apiKey.value))}`;
+            }
+        }
+
+        // Prepare Body with variable substitution
         let data = null;
         if (bodyType === 'json') {
             try {
-                data = JSON.parse(jsonBody);
+                // Substitute variables in JSON body before parsing
+                const substitutedJsonBody = substituteVariables(jsonBody);
+                data = JSON.parse(substitutedJsonBody);
             } catch (e) {
                 alert('Invalid JSON in request body');
                 setLoading(false);
@@ -203,21 +249,31 @@ function Input({ selectedPreset }) {
             data = {};
             formData.forEach(field => {
                 if (field.key.trim()) {
-                    data[field.key.trim()] = field.value;
+                    data[substituteVariables(field.key.trim())] = substituteVariables(field.value);
                 }
             });
         }
 
         const requestConfig = {
-            url: url,
+            url: finalUrl,
             method: method,
             headers: headersObj,
             data: data,
         };
 
         try {
+            // Track request timing
+            const startTime = performance.now();
+
             // Use the proxy endpoint instead of direct call
             const res = await axios.post('http://localhost:3000/api/proxy', requestConfig);
+
+            // Calculate response time
+            const endTime = performance.now();
+            const responseTime = Math.round(endTime - startTime);
+
+            // Calculate response size
+            const responseSize = new Blob([JSON.stringify(res.data.data)]).size;
 
             // Proxy always returns 200 if it successfully contacted the target
             // The actual target status is inside res.data.status
@@ -226,6 +282,8 @@ function Input({ selectedPreset }) {
                 statusText: res.data.statusText,
                 data: res.data.data,
                 headers: res.data.headers,
+                time: responseTime,
+                size: responseSize,
             };
             setResponse(responseState);
 
@@ -273,7 +331,7 @@ function Input({ selectedPreset }) {
                         type="text"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
-                        placeholder="Enter URL"
+                        placeholder="Enter URL (use {variableName} for env variables)"
                         style={styles.urlInput}
                     />
                     <button onClick={handleSend} style={styles.sendButton}>
@@ -285,6 +343,103 @@ function Input({ selectedPreset }) {
                     <button onClick={handleClear} style={styles.clearButton}>
                         Clear
                     </button>
+                </div>
+
+                {/* Show resolved URL when variables are present */}
+                {hasVariables && (
+                    <div style={styles.resolvedUrlPreview}>
+                        <span style={styles.resolvedUrlLabel}>Resolved URL:</span>
+                        <code style={styles.resolvedUrlValue}>{resolvedUrl}</code>
+                    </div>
+                )}
+
+                {/* Authentication Section */}
+                <div style={styles.authSection}>
+                    <div style={styles.sectionTitle}>Authentication</div>
+                    <div style={styles.authTabs}>
+                        <button
+                            style={authType === 'none' ? styles.activeAuthTab : styles.authTab}
+                            onClick={() => setAuthType('none')}
+                        >
+                            None
+                        </button>
+                        <button
+                            style={authType === 'bearer' ? styles.activeAuthTab : styles.authTab}
+                            onClick={() => setAuthType('bearer')}
+                        >
+                            Bearer Token
+                        </button>
+                        <button
+                            style={authType === 'basic' ? styles.activeAuthTab : styles.authTab}
+                            onClick={() => setAuthType('basic')}
+                        >
+                            Basic Auth
+                        </button>
+                        <button
+                            style={authType === 'api-key' ? styles.activeAuthTab : styles.authTab}
+                            onClick={() => setAuthType('api-key')}
+                        >
+                            API Key
+                        </button>
+                    </div>
+
+                    {authType === 'bearer' && (
+                        <div style={styles.authInputs}>
+                            <input
+                                type="text"
+                                placeholder="Enter Bearer token (supports {variables})"
+                                value={bearerToken}
+                                onChange={(e) => setBearerToken(e.target.value)}
+                                style={styles.authInput}
+                            />
+                        </div>
+                    )}
+
+                    {authType === 'basic' && (
+                        <div style={styles.authInputs}>
+                            <input
+                                type="text"
+                                placeholder="Username"
+                                value={basicAuth.username}
+                                onChange={(e) => setBasicAuth(prev => ({ ...prev, username: e.target.value }))}
+                                style={styles.authInputHalf}
+                            />
+                            <input
+                                type="password"
+                                placeholder="Password"
+                                value={basicAuth.password}
+                                onChange={(e) => setBasicAuth(prev => ({ ...prev, password: e.target.value }))}
+                                style={styles.authInputHalf}
+                            />
+                        </div>
+                    )}
+
+                    {authType === 'api-key' && (
+                        <div style={styles.authInputs}>
+                            <input
+                                type="text"
+                                placeholder="Key name (e.g., X-API-Key)"
+                                value={apiKey.key}
+                                onChange={(e) => setApiKey(prev => ({ ...prev, key: e.target.value }))}
+                                style={styles.authInputThird}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Value"
+                                value={apiKey.value}
+                                onChange={(e) => setApiKey(prev => ({ ...prev, value: e.target.value }))}
+                                style={styles.authInputThird}
+                            />
+                            <select
+                                value={apiKey.addTo}
+                                onChange={(e) => setApiKey(prev => ({ ...prev, addTo: e.target.value }))}
+                                style={styles.authSelect}
+                            >
+                                <option value="header">Add to Header</option>
+                                <option value="query">Add to Query Params</option>
+                            </select>
+                        </div>
+                    )}
                 </div>
 
                 <div style={styles.headersSection}>
@@ -360,21 +515,24 @@ function Input({ selectedPreset }) {
                     </div>
 
                     {bodyType === 'json' && (
-                        <textarea
-                            value={jsonBody}
-                            onChange={(e) => setJsonBody(e.target.value)}
-                            onBlur={() => {
-                                try {
-                                    const formatted = JSON.stringify(JSON.parse(jsonBody), null, 2);
-                                    setJsonBody(formatted);
-                                } catch (e) {
-                                    // ignore invalid json on blur, wait for user to fix
-                                }
-                            }}
-                            placeholder="Enter JSON body here..."
-                            style={styles.jsonEditor}
-                            spellCheck="false"
-                        />
+                        <div style={styles.jsonEditorWrapper}>
+                            <Editor
+                                value={jsonBody}
+                                onValueChange={code => setJsonBody(code)}
+                                highlight={code => highlight(code, languages.json)}
+                                padding={12}
+                                style={styles.jsonEditor}
+                                textareaClassName="json-editor-textarea"
+                                onBlur={() => {
+                                    try {
+                                        const formatted = JSON.stringify(JSON.parse(jsonBody), null, 2);
+                                        setJsonBody(formatted);
+                                    } catch (e) {
+                                        // ignore invalid json on blur, wait for user to fix
+                                    }
+                                }}
+                            />
+                        </div>
                     )}
 
                     {bodyType === 'form-data' && (
@@ -437,10 +595,25 @@ function Input({ selectedPreset }) {
                             <span style={styles.statusCode}>
                                 Status: {response.status} {response.statusText}
                             </span>
+                            <div style={styles.responseMetrics}>
+                                <span style={styles.responseTime}>
+                                    ⏱️ {response.time}ms
+                                </span>
+                                <span style={styles.responseSize}>
+                                    📦 {response.size > 1024
+                                        ? `${(response.size / 1024).toFixed(2)} KB`
+                                        : `${response.size} B`}
+                                </span>
+                            </div>
                         </div>
-                        <pre style={styles.responseBody}>
+                        <SyntaxHighlighter
+                            language="json"
+                            style={vscDarkPlus}
+                            customStyle={styles.responseBody}
+                            wrapLongLines={true}
+                        >
                             {JSON.stringify(response.data, null, 2)}
-                        </pre>
+                        </SyntaxHighlighter>
                     </div>
                 )
             }
@@ -619,7 +792,7 @@ const styles = {
         color: 'var(--error-color)',
     },
     responseSection: {
-        backgroundColor: 'var(--surface-color)',
+        backgroundColor: '#1e1e1e',
         border: '1px solid var(--border-color)',
         borderRadius: '12px',
         overflow: 'hidden',
@@ -627,25 +800,49 @@ const styles = {
     },
     responseHeader: {
         padding: '0.75rem 1rem',
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border-color)',
+        backgroundColor: '#2d2d2d',
+        borderBottom: '1px solid #404040',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     statusCode: {
         fontSize: '0.9rem',
         fontWeight: '600',
-        color: 'var(--text-primary)',
+        color: '#d4d4d4',
+    },
+    responseMetrics: {
+        display: 'flex',
+        gap: '1rem',
+        alignItems: 'center',
+    },
+    responseTime: {
+        fontSize: '0.85rem',
+        color: '#4ec9b0',
+        fontWeight: '500',
+        backgroundColor: '#1e1e1e',
+        padding: '0.25rem 0.75rem',
+        borderRadius: '12px',
+    },
+    responseSize: {
+        fontSize: '0.85rem',
+        color: '#9cdcfe',
+        fontWeight: '500',
+        backgroundColor: '#1e1e1e',
+        padding: '0.25rem 0.75rem',
+        borderRadius: '12px',
     },
     responseBody: {
         padding: '1rem',
         margin: 0,
-        backgroundColor: 'var(--surface-color)',
+        backgroundColor: '#1e1e1e',
         fontSize: '0.9rem',
         overflow: 'auto',
         maxHeight: '500px',
-        fontFamily: 'monospace',
+        fontFamily: "'Fira Code', 'Consolas', 'Monaco', monospace",
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
-        color: 'var(--text-primary)',
+        borderRadius: 0,
     },
     bodySection: {
         marginTop: '1.5rem',
@@ -680,22 +877,125 @@ const styles = {
         borderBottom: '2px solid var(--accent-color)',
         marginBottom: '-1px',
     },
-    jsonEditor: {
-        width: '100%',
-        minHeight: '200px',
-        padding: '0.75rem',
-        fontFamily: 'monospace',
-        fontSize: '0.9rem',
+    jsonEditorWrapper: {
         border: '1px solid var(--border-color)',
         borderRadius: '8px',
-        resize: 'vertical',
-        outline: 'none',
-        backgroundColor: 'var(--bg-primary)',
-        color: 'var(--text-primary)',
+        overflow: 'hidden',
+        backgroundColor: '#1e1e1e',
+    },
+    jsonEditor: {
+        fontFamily: "'Fira Code', 'Consolas', 'Monaco', monospace",
+        fontSize: '0.9rem',
+        minHeight: '200px',
+        backgroundColor: '#1e1e1e',
+        color: '#d4d4d4',
     },
     formDataList: {
         display: 'flex',
         flexDirection: 'column',
+    },
+    resolvedUrlPreview: {
+        marginTop: '0.75rem',
+        padding: '0.75rem 1rem',
+        backgroundColor: '#1e1e1e',
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+    },
+    resolvedUrlLabel: {
+        fontSize: '0.85rem',
+        color: '#888',
+        fontWeight: '500',
+    },
+    resolvedUrlValue: {
+        fontSize: '0.9rem',
+        color: '#9cdcfe',
+        fontFamily: "'Fira Code', 'Consolas', 'Monaco', monospace",
+        wordBreak: 'break-all',
+    },
+    authSection: {
+        marginTop: '1.5rem',
+        paddingTop: '1rem',
+        borderTop: '1px solid var(--border-color)',
+    },
+    sectionTitle: {
+        fontSize: '0.9rem',
+        fontWeight: '600',
+        color: 'var(--text-primary)',
+        marginBottom: '0.75rem',
+    },
+    authTabs: {
+        display: 'flex',
+        gap: '0.5rem',
+        marginBottom: '1rem',
+        flexWrap: 'wrap',
+    },
+    authTab: {
+        padding: '0.5rem 1rem',
+        cursor: 'pointer',
+        border: '1px solid var(--border-color)',
+        background: 'var(--bg-secondary)',
+        fontSize: '0.85rem',
+        fontWeight: '500',
+        color: 'var(--text-secondary)',
+        borderRadius: '6px',
+        transition: 'all 0.2s',
+    },
+    activeAuthTab: {
+        padding: '0.5rem 1rem',
+        cursor: 'pointer',
+        border: '1px solid #2e7d32',
+        background: 'rgba(46, 125, 50, 0.15)',
+        fontSize: '0.85rem',
+        fontWeight: '600',
+        color: '#4caf50',
+        borderRadius: '6px',
+    },
+    authInputs: {
+        display: 'flex',
+        gap: '0.5rem',
+        flexWrap: 'wrap',
+    },
+    authInput: {
+        flex: 1,
+        padding: '0.75rem',
+        fontSize: '0.9rem',
+        border: '1px solid var(--border-color)',
+        borderRadius: '6px',
+        backgroundColor: '#1e1e1e',
+        color: '#d4d4d4',
+        fontFamily: 'monospace',
+    },
+    authInputHalf: {
+        flex: '1 1 45%',
+        padding: '0.75rem',
+        fontSize: '0.9rem',
+        border: '1px solid var(--border-color)',
+        borderRadius: '6px',
+        backgroundColor: '#1e1e1e',
+        color: '#d4d4d4',
+    },
+    authInputThird: {
+        flex: '1 1 30%',
+        minWidth: '120px',
+        padding: '0.75rem',
+        fontSize: '0.9rem',
+        border: '1px solid var(--border-color)',
+        borderRadius: '6px',
+        backgroundColor: '#1e1e1e',
+        color: '#d4d4d4',
+        fontFamily: 'monospace',
+    },
+    authSelect: {
+        flex: '0 0 auto',
+        padding: '0.75rem',
+        fontSize: '0.9rem',
+        border: '1px solid var(--border-color)',
+        borderRadius: '6px',
+        backgroundColor: '#1e1e1e',
+        color: '#d4d4d4',
+        cursor: 'pointer',
     },
 }
 
